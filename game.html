@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator Clicker</title>
+<style>
+body {
+  margin: 0;
+  font-family: "Trebuchet MS", sans-serif;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: black;
+  color: #0f0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    #010 0px,
+    #010 20px,
+    #101 20px,
+    #101 40px
+  );
+  background-size: 100% 2px;
+}
+/* Panels */
+#achievements, #upgrades {
+  width: 20%;
+  padding: 15px;
+  overflow-y: auto;
+  height: 100%;
+}
+#achievements {
+  background: rgba(0,255,0,0.05);
+  backdrop-filter: blur(5px);
+  color: #0f0;
+  font-weight: bold;
+}
+#upgrades {
+  background: rgba(0,255,0,0.05);
+  backdrop-filter: blur(5px);
+  color: #fff;
+  font-weight: bold;
+}
+/* Game area */
+#game {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+/* Calculator */
+#clickBox {
+  width: 220px;
+  height: 320px;
+  background: #111;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 15px;
+  box-shadow: 0 8px 20px rgba(0,255,0,0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+#clickBox:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 25px rgba(0,255,0,0.5);
+}
+.calc-screen {
+  background: #000;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 20px;
+  text-align: right;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 5px #0f0;
+}
+.calc-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.calc-button {
+  background: #022;
+  color: #0f0;
+  border-radius: 8px;
+  padding: 15px 0;
+  font-weight: bold;
+  transition: background 0.2s ease;
+}
+.calc-button:hover { background: #044; }
+/* Headings and counter */
+h1 { font-size: 32px; color: #0f0; margin: 10px; }
+#counter {
+  font-size: 24px;
+  margin: 20px 0;
+  color: #0f0;
+  background: rgba(0,0,0,0.5);
+  padding: 10px 20px;
+  border-radius: 12px;
+  display: inline-block;
+}
+/* Upgrade & Achievement styles */
+.upgrade, .achievement {
+  background: rgba(0,255,0,0.05);
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.upgrade:hover { transform: scale(1.05); }
+.upgrade button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #022;
+  color: #0f0;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+.upgrade button.active { background: #0f0; color: #000; }
+.achievement { background: rgba(0,255,0,0.1); }
+.achievement.unlocked { background: rgba(0,255,0,0.5); font-weight: bold; }
+#cheatBox {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  background: rgba(0,0,0,0.85);
+  padding: 10px;
+  border-radius: 10px;
+  color: #0f0;
+}
+</style>
+</head>
+<body>
+<div id="achievements"><h2>Achievements</h2><div id="achievementList"></div></div>
+
+<div id="game">
+<h1>Calculator Clicker</h1>
+<div id="counter">Clicks: 0</div>
+<div id="clickBox" onclick="clickCalculator()">
+  <div class="calc-screen" id="calcScreen">0</div>
+  <div class="calc-buttons">
+    <div class="calc-button">7</div><div class="calc-button">8</div><div class="calc-button">9</div><div class="calc-button">÷</div>
+    <div class="calc-button">4</div><div class="calc-button">5</div><div class="calc-button">6</div><div class="calc-button">×</div>
+    <div class="calc-button">1</div><div class="calc-button">2</div><div class="calc-button">3</div><div class="calc-button">-</div>
+    <div class="calc-button">0</div><div class="calc-button">.</div><div class="calc-button equal-btn" onclick="secretClick()">=</div><div class="calc-button">+</div>
+  </div>
+</div>
+</div>
+
+<div id="upgrades"><h2>Upgrades</h2><div id="upgradeList"></div></div>
+
+<div id="cheatBox"><input type="text" id="cheatInput" placeholder="Enter cheat code"><button onclick="useCheat()">Apply</button></div>
+
+<script>
+let clicks=0, cps=1, secretClicks=0, upgradesBought=0;
+const counter=document.getElementById("counter");
+const screen=document.getElementById("calcScreen");
+const upgradeList=document.getElementById("upgradeList");
+const cheatBox=document.getElementById("cheatBox");
+
+// Upgrade names
+const upgradeNames=[
+"Baby’s First Addition","Double Trouble","Triple Play","Power of Four","High Five","Hexa Click","Lucky Seven","Octa Boost","Cloud Nine","Perfect Ten",
+"Prime Time","Dozen Digits","Baker’s Clicks","Square Root Squad","Sweet 15","Pi’s Little Helper","Algebra Antics","Geometry Jam","Nineteen Ninjas","Score Twenty",
+"Blackjack Bonus","Double Dozen","Fibonacci Friend","Golden Ratio Gain","Quarter Power","Matrix Multiplier","Polynomial Push","Prime Punch","Calculus Clicks","Thirty Dirty Clicks",
+"Infinite Series","Square Master","Cube Roots Crew","Four Factorials","Midlife Multiplier","Angle Wrangler","Derivative Drive","Pi-Rates Revenge","Almost Forty","XL Energy",
+"Mean Machine","Median Master","Mode Madness","Probability Push","45° Triangle Trick","Algorithm Amplifier","Big Brain Bonus","Complex Numbers","Nearly 50 Club","Halfway Hero",
+"Sigma Slam","Integral Boost","Limit Breaker","Logarithm Launcher","Double Nickel","Square Root of Fun","Prime Player","Vector Victory","Matrix Mayhem","Sixty Sine Wave",
+"Tangent Trick","Cotangent Crusher","Secant Supreme","Cosecant Chaos","Hyperbolic Helper","Euler’s Enigma","Nearly There Theorem","Absolute Value Amplifier","Nice Multiplier","Infinity Engine"
+];
+
+// Create upgrade objects
+const upgrades=upgradeNames.map((name,i)=>({name:name,cost:Math.floor(10*Math.pow(1.35,i+1)),bonus:i+1,level:0}));
+
+// Achievements
+const achievements=[
+{ name:"First Click!", condition:()=>clicks>=1 },
+{ name:"Click Apprentice (10)", condition:()=>clicks>=10 },
+{ name:"Hundred Hands (100)", condition:()=>clicks>=100 },
+{ name:"Thousand Taps (1,000)", condition:()=>clicks>=1000 },
+{ name:"Math Wizard (10,000)", condition:()=>clicks>=10000 },
+{ name:"π Lover (3,141)", condition:()=>clicks>=3141 },
+{ name:"Euler’s Number (2,718)", condition:()=>clicks>=2718 },
+{ name:"Golden Ratio (1,618)", condition:()=>clicks>=1618 },
+{ name:"Millionaire (1,000,000)", condition:()=>clicks>=1e6 },
+{ name:"Billionaire (1,000,000,000)", condition:()=>clicks>=1e9 },
+{ name:"Quadrillionaire (1e15)", condition:()=>clicks>=1e15 },
+{ name:"First Upgrade!", condition:()=>upgradesBought>=1 },
+{ name:"Collector (10 Upgrades)", condition:()=>upgradesBought>=10 },
+{ name:"Scholar (25 Upgrades)", condition:()=>upgradesBought>=25 },
+{ name:"Professor (50 Upgrades)", condition:()=>upgradesBought>=50 },
+{ name:"Math God (All 70)", condition:()=>upgradesBought>=70 }
+];
+const unlockedAchievements=new Set();
+
+// Update screen
+function updateCounter(){
+  counter.textContent=`Clicks: ${clicks}`;
+  screen.textContent=clicks;
+  updateUpgrades();
+  checkAchievements();
+}
+
+// Highlight affordable upgrades
+function updateUpgrades(){
+  upgrades.forEach((u,i)=>{
+    const btn=document.getElementById(`btn-${i}`);
+    if(clicks>=u.cost) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+}
+
+// Click main calculator
+function clickCalculator(){ clicks+=cps; updateCounter(); }
+
+// Buy upgrade
+function buyUpgrade(i){
+  const u=upgrades[i];
+  if(clicks>=u.cost){
+    clicks-=u.cost;
+    cps+=u.bonus;
+    upgradesBought++;
+    u.level++;
+    u.cost = Math.floor(u.cost*1.5); // scale cost
+    updateCounter();
+    const div = document.getElementById(`btn-${i}`).parentNode;
+    div.querySelector("span").textContent = `${u.name} (+${u.bonus}/click) Level: ${u.level}`;
+    document.getElementById(`btn-${i}`).textContent = `BUY (${u.cost})`;
+  }
+}
+
+// Load upgrades
+function loadUpgrades(){
+  upgrades.forEach((u,i)=>{
+    const div=document.createElement("div"); div.className="upgrade";
+    const textSpan=document.createElement("span"); textSpan.textContent=`${u.name} (+${u.bonus}/click) Level: ${u.level}`;
+    const buyBtn=document.createElement("button"); buyBtn.id=`btn-${i}`; buyBtn.onclick=()=>buyUpgrade(i); buyBtn.textContent=`BUY (${u.cost})`;
+    div.appendChild(textSpan); div.appendChild(buyBtn); upgradeList.appendChild(div);
+  });
+}
+
+// Load achievements
+function loadAchievements(){
+  const list=document.getElementById("achievementList");
+  achievements.forEach(a=>{
+    const div=document.createElement("div"); div.textContent=a.name; div.className="achievement"; div.id=`ach-${a.name}`;
+    list.appendChild(div);
+  });
+}
+
+// Check achievements
+function checkAchievements(){
+  achievements.forEach(a=>{
+    if(a.condition()&&!unlockedAchievements.has(a.name)){
+      unlockedAchievements.add(a.name);
+      const el=document.getElementById(`ach-${a.name}`);
+      el.classList.add("unlocked"); el.textContent=`🏆 ${a.name}`;
+    }
+  });
+}
+
+// Secret cheat
+function secretClick(){ clickCalculator(); secretClicks++; if(secretClicks>=5) cheatBox.style.display="block"; }
+function useCheat(){
+  const val=document.getElementById("cheatInput").value;
+  if(val==="add500") clicks+=5000;
+  if(val==="plus20000000") clicks=-999999999;
+  if(val==="mathgenius") cps+=50;
+  if(val==="resetall"){ clicks=0;cps=1;upgradesBought=0; upgrades.forEach(u=>u.level=0);}
+  updateCounter();
+}
+
+loadUpgrades(); loadAchievements(); updateCounter();
+</script>
+</body>
+</html>
